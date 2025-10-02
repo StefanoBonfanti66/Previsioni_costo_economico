@@ -48,4 +48,34 @@ Lo script genererà un nuovo file Excel chiamato `forecasting.xlsx` nella stessa
 - **Colonne D-O:** Totali mensili per l'anno 2025 (Gennaio-Dicembre).
 - **Colonna P:** Totale Anno (somma di tutti gli importi rilevanti).
 
-### Data Ultimo Aggiornamento: 01/10/2025
+### Applicazione Streamlit: `app.py`
+
+#### Scopo
+L'applicazione `app.py` fornisce un'interfaccia web interattiva per generare il report di previsione. Permette agli utenti di caricare il file `ordfor06.xlsx` e visualizzare il report direttamente nel browser.
+
+#### Funzionalità aggiuntive:
+- **Caricamento file**: Permette di caricare il file `ordfor06.xlsx` tramite un'interfaccia utente.
+- **Filtro Fornitori**: Include un filtro multiselect per selezionare uno o più fornitori da visualizzare nel report. Di default, tutti i fornitori sono selezionati tramite l'opzione "Tutti".
+- **Nomi dei mesi in italiano**: I nomi dei mesi nelle colonne del report sono visualizzati in italiano.
+- **Download Report**: Permette di scaricare il report generato in formato Excel (`forecasting.xlsx`).
+- **Timestamp di aggiornamento**: Mostra un timestamp nell'interfaccia per indicare l'ultimo aggiornamento dell'applicazione.
+
+#### Come utilizzare l'applicazione Streamlit
+
+**Prerequisiti:**
+Oltre a `openpyxl`, è necessaria la libreria `streamlit` e `pandas`.
+```bash
+pip install streamlit pandas
+```
+
+**Esecuzione in locale (per test):**
+1. Assicurati di avere `app.py` e `requirements.txt` nella directory del progetto.
+2. Apri il terminale nella directory del progetto e esegui:
+```bash
+streamlit run app.py
+```
+
+**Deploy su Streamlit Cloud:**
+L'applicazione è configurata per il deploy su Streamlit Cloud. Dopo aver caricato i file `app.py` e `requirements.txt` sul repository GitHub, è possibile deployare l'app seguendo le istruzioni di Streamlit Cloud (selezionando il branch `master` e `app.py` come main file).
+
+### Data Ultimo Aggiornamento: 02/10/2025 12:45:00
