@@ -126,7 +126,7 @@ if uploaded_file:
             for month_num in range(1, 13):
                 month_str = f"{month_num:02d}"
                 month_name = datetime(2025, month_num, 1).strftime("%B")
-                row_data[month_name] = data["monthly_totals"Май][month_str]
+                row_data[month_name] = data["monthly_totals"][month_str]
             row_data["Totale Anno"] = data["yearly_total"]
             report_rows.append(row_data)
         
