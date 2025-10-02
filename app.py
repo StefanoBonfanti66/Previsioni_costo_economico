@@ -63,7 +63,7 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
                                 pass
                 
                 if delivery_date and delivery_date <= datetime(2025, 12, 31):
-                    amount_str = str(col_m_value).replace(',', '.')
+                    amount_str = str(col_m_value).replace(",", ".")
                     amount = float(amount_str)
 
                     if delivery_date.year == 2025:
@@ -75,12 +75,12 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
                     suppliers_data[current_supplier_code]['yearly_total'] += amount
             except (ValueError, TypeError) as e:
                 pass
-        return suppliers_data
+    return suppliers_data
 
-    # --- Streamlit App ---
-    st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
+# --- Streamlit App ---
+st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
 
-    st.title("📊 Report Previsioni di Costo Economico")
+st.title("📊 Report Previsioni di Costo Economico")
 st.markdown("Carica il tuo file `ordfor06.xlsx` per generare il report di previsione.")
 
 uploaded_file = st.file_uploader("Scegli un file Excel (ordfor06.xlsx)", type=["xlsx"])
@@ -94,9 +94,36 @@ if uploaded_file:
     if suppliers_data:
         st.subheader("Report Generato")
 
+        # Extract all supplier names for the filter
+        all_supplier_names_raw = sorted([data["name"] for data in suppliers_data.values()])
+        
+        # Add "Tutti" option
+        all_supplier_names_for_multiselect = ["Tutti"] + all_supplier_names_raw
+        
+        # Multiselect widget for supplier names
+        selected_supplier_names = st.multiselect(
+            "Seleziona Fornitori",
+            options=all_supplier_names_for_multiselect,
+            default=["Tutti"] # Default to "Tutti" selected
+        )
+
+        # Filter suppliers_data based on selection
+        if "Tutti" in selected_supplier_names: # Show all if "Tutti" is selected
+            filtered_suppliers_data = suppliers_data 
+        elif selected_supplier_names: # Filter if specific suppliers are selected
+            filtered_suppliers_data = {code: data for code, data in suppliers_data.items() if data["name"] in selected_supplier_names}
+        else:
+            filtered_suppliers_data = {} # Show no suppliers if nothing is selected and "Tutti" is not there
+
         # Prepare data for DataFrame
         report_rows = []
-        sorted_suppliers = sorted(suppliers_data.items(), key=lambda item: item[1]['name'])
+        sorted_suppliers = sorted(filtered_suppliers_data.items(), key=lambda item: item[1]['name'])
+
+        # Italian month names
+        italian_month_names = [
+            "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+            "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+        ]
 
         for code, data in sorted_suppliers:
             row_data = {
@@ -106,7 +133,7 @@ if uploaded_file:
             }
             for month_num in range(1, 13):
                 month_str = f"{month_num:02d}"
-                month_name = datetime(2025, month_num, 1).strftime("%B")
+                month_name = italian_month_names[month_num - 1] # Use pre-defined Italian name
                 row_data[month_name] = data["monthly_totals"][month_str]
             row_data["Totale Anno"] = data["yearly_total"]
             report_rows.append(row_data)
@@ -128,7 +155,7 @@ if uploaded_file:
 
         # Write headers
         headers = ["Fornitore", "Codice Fornitore", "Antecedenti 2025"] + \
-                  [datetime(2025, m, 1).strftime("%B") for m in range(1, 13)] + \
+                  italian_month_names + \
                   ["Totale Anno"]
         report_sheet.append(headers)
 
