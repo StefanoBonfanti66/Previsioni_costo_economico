@@ -14,7 +14,6 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
         # openpyxl.load_workbook can take a file-like object directly
         workbook = openpyxl.load_workbook(input_excel_file)
         sheet = workbook[sheet_name]
-        # st.write("DEBUG: Workbook loaded successfully.") # Removed debug
     except Exception as e:
         st.error(f"Errore durante l'apertura del file Excel: {e}")
         return None
@@ -29,27 +28,18 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
     current_supplier_code = None
     current_supplier_name = None
 
-    # Debug: Show first few rows of raw data - Removed debug
-    # st.subheader("DEBUG: Raw Data Sample (First 10 rows)")
-    # raw_data_sample = []
-    # for r_idx, row in enumerate(sheet.iter_rows(), start=1):
-    #     if r_idx > 10: break
-    #     raw_data_sample.append([cell.value for cell in row])
-    # st.write(pd.DataFrame(raw_data_sample))
-
     for row_index, row in enumerate(sheet.iter_rows(), start=1):
         col_a_value = row[0].value if len(row) > 0 else None
         col_b_value = row[1].value if len(row) > 1 else None
         col_c_value = row[2].value if len(row) > 2 else None
         col_d_value = row[3].value if len(row) > 3 else None
-        col_m_value = row[12].value if len(row) > 12 else None
+        col_m_value = row[12].value if len(row) > 12 else None # Column M is index 12 (for controvalore)
 
         if col_a_value == "Cod. fornitore":
             current_supplier_code = col_b_value
             current_supplier_name = col_d_value
             if current_supplier_code:
                 suppliers_data[current_supplier_code]["name"] = current_supplier_name
-                # st.write(f"DEBUG: New Supplier Block - Code: {current_supplier_code}, Name: {current_supplier_name}") # Removed debug
         
         elif current_supplier_code and col_a_value and \
              isinstance(col_a_value, (str, int, float)) and \
@@ -83,23 +73,14 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
                         suppliers_data[current_supplier_code]['antecedenti_2025_total'] += amount
                     
                     suppliers_data[current_supplier_code]['yearly_total'] += amount
-                    # st.write(f"DEBUG: Order Processed - Supplier: {current_supplier_code}, Date: {delivery_date.strftime('%Y-%m-%d')}, Amount: {amount}") # Removed debug
-                # else:
-                    # st.write(f"DEBUG: Order Skipped (Date Filter) - Row: {row_index}, Date: {col_d_value}") # Removed debug
             except (ValueError, TypeError) as e:
-                # st.write(f"DEBUG: Order Skipped (Parsing Error) - Row: {row_index}, Error: {e}, Date: {col_d_value}, Amount: {col_m_value}") # Removed debug
                 pass
-        # else:
-            # if row_index < 15: # Limit debug output - Removed debug
-                # st.write(f"DEBUG: Row Skipped (Not Order Line) - Row: {row_index}, Col A: {col_a_value}, Current Supplier: {current_supplier_code}") # Removed debug
-    
-    # st.write("DEBUG: Final suppliers_data (sample):", {k: suppliers_data[k] for k in list(suppliers_data)[:2]}) # Removed debug
-    return suppliers_data
+        return suppliers_data
 
-# --- Streamlit App ---
-st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
+    # --- Streamlit App ---
+    st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
 
-st.title("📊 Report Previsioni di Costo Economico")
+    st.title("📊 Report Previsioni di Costo Economico")
 st.markdown("Carica il tuo file `ordfor06.xlsx` per generare il report di previsione.")
 
 uploaded_file = st.file_uploader("Scegli un file Excel (ordfor06.xlsx)", type=["xlsx"])
@@ -134,7 +115,7 @@ if uploaded_file:
         
         # Display DataFrame
         st.dataframe(df.style.format(
-            {col: '#,##0.00 €' for col in df.columns if col not in ["Fornitore", "Codice Fornitore"]}
+            {col: "{:,.2f} €" for col in df.columns if col not in ["Fornitore", "Codice Fornitore"]}
         ), use_container_width=True)
 
         # Download button for Excel file
@@ -170,7 +151,7 @@ if uploaded_file:
 
         # Add update date
         report_sheet.append([])
-        report_sheet.append([f"Aggiornato al: {datetime.now().strftime('%d/%m/%Y')}"])
+        report_sheet.append([f"Aggiornato al: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"])
 
         report_workbook.save(output_excel_buffer)
         output_excel_buffer.seek(0)
@@ -185,4 +166,4 @@ if uploaded_file:
         st.warning("Nessun dato generato. Controlla il formato del file o i dati.")
 
 st.markdown(f"---")
-st.info(f"Ultimo aggiornamento: {datetime.now().strftime('%d/%m/%Y')}")
+st.info(f"Ultimo aggiornamento: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
