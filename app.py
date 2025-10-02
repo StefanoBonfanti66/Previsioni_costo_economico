@@ -14,7 +14,7 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
         # openpyxl.load_workbook can take a file-like object directly
         workbook = openpyxl.load_workbook(input_excel_file)
         sheet = workbook[sheet_name]
-        st.write("DEBUG: Workbook loaded successfully.")
+        # st.write("DEBUG: Workbook loaded successfully.") # Removed debug
     except Exception as e:
         st.error(f"Errore durante l'apertura del file Excel: {e}")
         return None
@@ -29,13 +29,13 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
     current_supplier_code = None
     current_supplier_name = None
 
-    # Debug: Show first few rows of raw data
-    st.subheader("DEBUG: Raw Data Sample (First 10 rows)")
-    raw_data_sample = []
-    for r_idx, row in enumerate(sheet.iter_rows(), start=1):
-        if r_idx > 10: break
-        raw_data_sample.append([cell.value for cell in row])
-    st.write(pd.DataFrame(raw_data_sample))
+    # Debug: Show first few rows of raw data - Removed debug
+    # st.subheader("DEBUG: Raw Data Sample (First 10 rows)")
+    # raw_data_sample = []
+    # for r_idx, row in enumerate(sheet.iter_rows(), start=1):
+    #     if r_idx > 10: break
+    #     raw_data_sample.append([cell.value for cell in row])
+    # st.write(pd.DataFrame(raw_data_sample))
 
     for row_index, row in enumerate(sheet.iter_rows(), start=1):
         col_a_value = row[0].value if len(row) > 0 else None
@@ -49,7 +49,7 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
             current_supplier_name = col_d_value
             if current_supplier_code:
                 suppliers_data[current_supplier_code]["name"] = current_supplier_name
-                st.write(f"DEBUG: New Supplier Block - Code: {current_supplier_code}, Name: {current_supplier_name}")
+                # st.write(f"DEBUG: New Supplier Block - Code: {current_supplier_code}, Name: {current_supplier_name}") # Removed debug
         
         elif current_supplier_code and col_a_value and \
              isinstance(col_a_value, (str, int, float)) and \
@@ -83,17 +83,17 @@ def generate_forecasting_data(input_excel_file, sheet_name="Sheet1"):
                         suppliers_data[current_supplier_code]['antecedenti_2025_total'] += amount
                     
                     suppliers_data[current_supplier_code]['yearly_total'] += amount
-                    st.write(f"DEBUG: Order Processed - Supplier: {current_supplier_code}, Date: {delivery_date.strftime('%Y-%m-%d')}, Amount: {amount}")
-                else:
-                    st.write(f"DEBUG: Order Skipped (Date Filter) - Row: {row_index}, Date: {col_d_value}")
+                    # st.write(f"DEBUG: Order Processed - Supplier: {current_supplier_code}, Date: {delivery_date.strftime('%Y-%m-%d')}, Amount: {amount}") # Removed debug
+                # else:
+                    # st.write(f"DEBUG: Order Skipped (Date Filter) - Row: {row_index}, Date: {col_d_value}") # Removed debug
             except (ValueError, TypeError) as e:
-                st.write(f"DEBUG: Order Skipped (Parsing Error) - Row: {row_index}, Error: {e}, Date: {col_d_value}, Amount: {col_m_value}")
+                # st.write(f"DEBUG: Order Skipped (Parsing Error) - Row: {row_index}, Error: {e}, Date: {col_d_value}, Amount: {col_m_value}") # Removed debug
                 pass
-        else:
-            if row_index < 15: # Limit debug output
-                st.write(f"DEBUG: Row Skipped (Not Order Line) - Row: {row_index}, Col A: {col_a_value}, Current Supplier: {current_supplier_code}")
+        # else:
+            # if row_index < 15: # Limit debug output - Removed debug
+                # st.write(f"DEBUG: Row Skipped (Not Order Line) - Row: {row_index}, Col A: {col_a_value}, Current Supplier: {current_supplier_code}") # Removed debug
     
-    st.write("DEBUG: Final suppliers_data (sample):", {k: suppliers_data[k] for k in list(suppliers_data)[:2]})
+    # st.write("DEBUG: Final suppliers_data (sample):", {k: suppliers_data[k] for k in list(suppliers_data)[:2]}) # Removed debug
     return suppliers_data
 
 # --- Streamlit App ---
@@ -126,7 +126,7 @@ if uploaded_file:
             for month_num in range(1, 13):
                 month_str = f"{month_num:02d}"
                 month_name = datetime(2025, month_num, 1).strftime("%B")
-                row_data[month_name] = data["monthly_totals"Май][month_str]
+                row_data[month_name] = data["monthly_totals"][month_str]
             row_data["Totale Anno"] = data["yearly_total"]
             report_rows.append(row_data)
         
