@@ -88,7 +88,7 @@ def add_contropartita_data(report_data, anagrafica_file, contropartita_file):
 
 # --- Applicazione Streamlit ---
 st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
-st.title("📊 Vetronaviglio s.r.l. Report Previsioni di Costo Economico")
+st.title("📊 Vetronaviglio s.r.l. - Report Previsioni di Costo Economico")
 
 uploaded_file = st.file_uploader("1. Carica il file `ordfor06.xlsx`", type=["xlsx"])
 
