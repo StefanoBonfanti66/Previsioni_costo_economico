@@ -90,6 +90,8 @@ def add_contropartita_data(report_data, anagrafica_file, contropartita_file):
 st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
 st.title("📊 Report Previsioni di Costo Economico")
 
+st.subheader("vetronaviglio s.r.l.")
+
 uploaded_file = st.file_uploader("1. Carica il file `ordfor06.xlsx`", type=["xlsx"])
 
 # Sezione opzionale per Contropartita
