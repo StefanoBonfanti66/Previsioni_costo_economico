@@ -48,34 +48,33 @@ Lo script genererà un nuovo file Excel chiamato `forecasting.xlsx` nella stessa
 - **Colonne D-O:** Totali mensili per l'anno 2025 (Gennaio-Dicembre).
 - **Colonna P:** Totale Anno (somma di tutti gli importi rilevanti).
 
-### Applicazione Streamlit: `app.py`
+### Script: app.py (Elaborazione Contropartita)
 
 #### Scopo
-L'applicazione `app.py` fornisce un'interfaccia web interattiva per generare il report di previsione. Permette agli utenti di caricare il file `ordfor06.xlsx` e visualizzare il report direttamente nel browser.
+Questo script arricchisce il report `forecasting.xlsx` (generato da `generate_report.py`) aggiungendo la colonna "Contropartita" per ogni fornitore.
 
-#### Funzionalità aggiuntive:
-- **Caricamento file**: Permette di caricare il file `ordfor06.xlsx` tramite un'interfaccia utente.
-- **Filtro Fornitori**: Include un filtro multiselect per selezionare uno o più fornitori da visualizzare nel report. Di default, tutti i fornitori sono selezionati tramite l'opzione "Tutti".
-- **Nomi dei mesi in italiano**: I nomi dei mesi nelle colonne del report sono visualizzati in italiano.
-- **Download Report**: Permette di scaricare il report generato in formato Excel (`forecasting.xlsx`).
-- **Timestamp di aggiornamento**: Mostra un timestamp nell'interfaccia per indicare l'ultimo aggiornamento dell'applicazione.
+#### Logica di funzionamento
+1.  **Lettura File**: Lo script legge tre file Excel: `forecasting.xlsx`, `anagrafica.xlsx`, e `contropartita.xlsx`.
+2.  **Mappatura Contropartita**: Crea una mappa dei codici di contropartita leggendo `contropartita.xlsx` (Codice in colonna A, Valore finale in colonna C).
+3.  **Mappatura Fornitori**: Analizza il file `anagrafica.xlsx`, che ha una struttura a blocchi, per creare una mappa tra il "Codice Fornitore" e il rispettivo codice di contropartita. Un blocco fornitore è identificato dalla parola "Codice" in colonna A.
+    - Il **Codice Fornitore** viene letto dalla colonna B della riga "Codice".
+    - Il **Codice Contropartita** associato viene letto dalla colonna K della riga successiva.
+4.  **Aggiornamento Report**: Lo script modifica il file `forecasting.xlsx`, inserendo la colonna "Contropartita" in terza posizione (colonna C) e popolandola con i valori trovati tramite le mappature.
 
-#### Come utilizzare l'applicazione Streamlit
+#### Come utilizzare lo script
 
-**Prerequisiti:**
-Oltre a `openpyxl`, è necessaria la libreria `streamlit` e `pandas`.
+**File di Input:**
+- `forecasting.xlsx`: Il report generato da `generate_report.py`.
+- `anagrafica.xlsx`: File anagrafico dei fornitori contenente i codici fornitore e i codici di contropartita.
+- `contropartita.xlsx`: File di mappatura che traduce i codici di contropartita nei valori finali.
+
+**Esecuzione:**
+Assicurati che tutti i file di input siano presenti e chiusi. Esegui lo script dal terminale:
 ```bash
-pip install streamlit pandas
+python app.py
 ```
 
-**Esecuzione in locale (per test):**
-1. Assicurati di avere `app.py` e `requirements.txt` nella directory del progetto.
-2. Apri il terminale nella directory del progetto e esegui:
-```bash
-streamlit run app.py
-```
+**File di Output:**
+Lo script modifica direttamente il file `forecasting.xlsx`, aggiungendo la colonna "Contropartita" in terza posizione.
 
-**Deploy su Streamlit Cloud:**
-L'applicazione è configurata per il deploy su Streamlit Cloud. Dopo aver caricato i file `app.py` e `requirements.txt` sul repository GitHub, è possibile deployare l'app seguendo le istruzioni di Streamlit Cloud (selezionando il branch `master` e `app.py` come main file).
-
-### Data Ultimo Aggiornamento: 02/10/2025 12:45:00
+### Data Ultimo Aggiornamento: 03/10/2025 12:00:00
