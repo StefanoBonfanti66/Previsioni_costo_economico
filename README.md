@@ -15,7 +15,7 @@ Lo script `generate_report.py` legge i dati degli ordini da un file Excel di inp
 - Raggruppamento degli importi per gli ordini con data di consegna antecedente al 2025 in una colonna dedicata.
 - Calcolo del totale annuale per ciascun fornitore.
 - Ordinamento dei fornitori in ordine alfabetico per nome nel report finale.
-- Formattazione delle colonne degli importi come valuta (€), troncando i centesimi.
+- Formattazione delle colonne degli importi come valuta (€), arrotondando al numero intero più vicino.
 
 #### Come utilizzare lo script
 
