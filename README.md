@@ -28,7 +28,7 @@ pip install openpyxl
 **File di Input:**
 Lo script si aspetta un file Excel chiamato `ordfor06.xlsx` nella stessa directory dello script. Il file deve contenere i dati degli ordini nel foglio `Sheet1` con la seguente struttura:
 - **Colonna A:** Numero d'ordine (utilizzato per identificare le righe d'ordine).
-- **Colonna D:** Data di consegna (formati supportati: `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DD`, `DD/MM/YYYY`).
+- **Colonna D:** Data di consegna (formati supportati: `YYYY-MM-DD HH:MM:%S`, `YYYY-MM-DD`, `DD/MM/YYYY`).
 - **Colonna M:** Controvalore dell'ordine (importo numerico, può usare la virgola come separatore decimale).
 - Le righe che iniziano con "Cod. fornitore" nella Colonna A sono considerate intestazioni di blocco fornitore, con il codice fornitore in Colonna B e il nome del fornitore in Colonna D.
 
