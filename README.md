@@ -15,7 +15,7 @@ Lo script `generate_report.py` legge i dati degli ordini da un file Excel di inp
 - Raggruppamento degli importi per gli ordini con data di consegna antecedente al 2025 in una colonna dedicata.
 - Calcolo del totale annuale per ciascun fornitore.
 - Ordinamento dei fornitori in ordine alfabetico per nome nel report finale.
-- Formattazione delle colonne degli importi come valuta (€).
+- Formattazione delle colonne degli importi come valuta (€), troncando i centesimi.
 
 #### Come utilizzare lo script
 
@@ -28,7 +28,7 @@ pip install openpyxl
 **File di Input:**
 Lo script si aspetta un file Excel chiamato `ordfor06.xlsx` nella stessa directory dello script. Il file deve contenere i dati degli ordini nel foglio `Sheet1` con la seguente struttura:
 - **Colonna A:** Numero d'ordine (utilizzato per identificare le righe d'ordine).
-- **Colonna D:** Data di consegna (formati supportati: `YYYY-MM-DD HH:MM:%S`, `YYYY-MM-DD`, `DD/MM/YYYY`).
+- **Colonna D:** Data di consegna (formati supportati: `YYYY-MM-DD HH:MM:SS`, `YYYY-MM-DD`, `DD/MM/YYYY`).
 - **Colonna M:** Controvalore dell'ordine (importo numerico, può usare la virgola come separatore decimale).
 - Le righe che iniziano con "Cod. fornitore" nella Colonna A sono considerate intestazioni di blocco fornitore, con il codice fornitore in Colonna B e il nome del fornitore in Colonna D.
 
