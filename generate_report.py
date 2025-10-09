@@ -4,84 +4,171 @@ from collections import defaultdict
 import os
 import pytz
 
-def get_contropartita_data(suppliers_data, anagrafica_path, contropartita_path):
-    """Arricchisce i dati dei fornitori con le informazioni sulla contropartita."""
-    try:
-        wb_anagrafica = openpyxl.load_workbook(anagrafica_path, data_only=True)
-        sheet_anagrafica = wb_anagrafica["Sheet1"]
-        wb_contropartita = openpyxl.load_workbook(contropartita_path, data_only=True)
-        sheet_contropartita = wb_contropartita["Foglio1"]
+def get_conto_data(suppliers_data, conto_path):
 
-        contropartita_map = {str(row[0]): row[2] for row in sheet_contropartita.iter_rows(min_row=2, values_only=True) if row[0] is not None}
+    """Arricchisce i dati dei fornitori con le informazioni sui conti da conto.xlsx."""
+
+    supplier_accounts = defaultdict(list)
+
+    try:
+
+        wb_conto = openpyxl.load_workbook(conto_path, data_only=True)
+
+        sheet_conto = wb_conto["Foglio1"] # Assumiamo che il foglio si chiami Foglio1
+
         
-        anagrafica_map = {}
-        rows_iter = sheet_anagrafica.iter_rows()
-        for row in rows_iter:
-            if isinstance(row[0].value, str) and row[0].value.strip().lower() == "codice":
-                codice_fornitore = row[1].value
-                if codice_fornitore:
-                    try:
-                        next_row = next(rows_iter)
-                        ch_rifer_conto_code = next_row[10].value # Colonna K
-                        if ch_rifer_conto_code:
-                            anagrafica_map[str(codice_fornitore)] = str(ch_rifer_conto_code)
-                    except StopIteration:
-                        break
-        
-        for code, data in suppliers_data.items():
-            ch_rifer_code = anagrafica_map.get(str(code))
-            data["Contropartita"] = contropartita_map.get(ch_rifer_code, "") if ch_rifer_code else ""
-        
-        return suppliers_data, True # Ritorna True per indicare che l'arricchimento è avvenuto
-    except Exception:
-        return suppliers_data, False # In caso di errore, ritorna i dati originali
+
+        # Prefissi dei conti da considerare
+
+        valid_prefixes = ("50.10", "50.20", "52.10", "54.10")
+
+
+
+        last_ragione_sociale = "" # Variabile per gestire le celle unite
+
+
+
+        for row_idx, row in enumerate(sheet_conto.iter_rows(min_row=2, values_only=True)):
+
+            if len(row) > 5:
+
+                current_ragione_sociale = str(row[4]).strip() if row[4] is not None else ""
+
+                conto = str(row[5]).strip() if row[5] is not None else ""
+
+
+
+                # Gestione delle celle unite: se la ragione sociale corrente è vuota, usa l'ultima non vuota
+
+                if current_ragione_sociale:
+
+                    last_ragione_sociale = current_ragione_sociale
+
+                
+
+                ragione_sociale_to_use = last_ragione_sociale
+
+
+
+                if ragione_sociale_to_use and conto.startswith(valid_prefixes):
+
+                    supplier_accounts[ragione_sociale_to_use].append(conto)
+
+    except Exception as e:
+
+        print(f"ERRORE in get_conto_data durante la lettura di conto.xlsx: {e}")
+
+        return suppliers_data, False # In caso di errore, ritorna i dati originali e indica che non è stato aggiunto nulla
+
+
+
+    contropartita_added = False
+
+    for code, data in suppliers_data.items():
+
+        supplier_name = data["name"]
+
+        if supplier_name in supplier_accounts:
+
+            data["Contropartita"] = ", ".join(sorted(list(set(supplier_accounts[supplier_name])))) # Unisci conti unici e ordinati
+
+            contropartita_added = True
+
+        else:
+
+            data["Contropartita"] = "N/A" # Nessun conto trovato per questo fornitore
+
+            
+
+    return suppliers_data, contropartita_added
+
+
 
 def generate_forecasting_report(input_filepath, output_filepath, sheet_name="Sheet1"):
+
     """Genera un report di previsione e, se possibile, lo arricchisce con la contropartita."""
+
     try:
+
         workbook = openpyxl.load_workbook(input_filepath)
+
         sheet = workbook[sheet_name]
+
     except Exception as e:
+
         return f"Errore durante l'apertura del file di input: {e}"
 
+
+
     # ... (Logica di estrazione dati da ordfor06.xlsx - invariata) ...
+
     suppliers_data = defaultdict(lambda: {
+
         "name": "", "monthly_totals": defaultdict(float),
+
         "antecedenti_2025_total": 0.0, "yearly_total": 0.0
+
     })
+
     current_supplier_code = None
+
     for row in sheet.iter_rows():
+
         col_a_value = row[0].value if len(row) > 0 else None
+
         col_b_value = row[1].value if len(row) > 1 else None
+
         col_d_value = row[3].value if len(row) > 3 else None
+
         col_m_value = row[12].value if len(row) > 12 else None
+
         if col_a_value == "Cod. fornitore":
+
             current_supplier_code = col_b_value
+
             if current_supplier_code: suppliers_data[current_supplier_code]["name"] = row[3].value
+
         elif current_supplier_code and col_a_value and isinstance(col_a_value, (str, int, float)) and str(col_a_value).strip() not in ["Cod. fornitore", "Subtotale"] and col_d_value and col_m_value is not None:
+
             try:
+
                 delivery_date = None
+
                 if isinstance(col_d_value, datetime): delivery_date = col_d_value
+
                 elif isinstance(col_d_value, str):
+
                     try: delivery_date = datetime.strptime(col_d_value, "%Y-%m-%d %H:%M:%S")
+
                     except ValueError: 
+
                         try: delivery_date = datetime.strptime(col_d_value, "%Y-%m-%d")
+
                         except ValueError: 
+
                             try: delivery_date = datetime.strptime(col_d_value, "%d/%m/%Y")
+
                             except ValueError: pass
+
                 if delivery_date and delivery_date <= datetime(2025, 12, 31):
+
                     amount = float(str(col_m_value).replace(",", "."))
+
                     if delivery_date.year == 2025: suppliers_data[current_supplier_code]['monthly_totals'][delivery_date.strftime("%m")] += amount
+
                     elif delivery_date.year < 2025: suppliers_data[current_supplier_code]['antecedenti_2025_total'] += amount
+
                     suppliers_data[current_supplier_code]['yearly_total'] += amount
+
             except (ValueError, TypeError): pass
 
-    # --- Integrazione Logica Contropartita ---
+
+
+    # --- Integrazione Logica Contropartita da conto.xlsx ---
     contropartita_added = False
-    anagrafica_path = "anagrafica.xlsx"
-    contropartita_path = "contropartita.xlsx"
-    if os.path.exists(anagrafica_path) and os.path.exists(contropartita_path):
-        suppliers_data, contropartita_added = get_contropartita_data(suppliers_data, anagrafica_path, contropartita_path)
+    conto_path = "conto.xlsx"
+    if os.path.exists(conto_path):
+        suppliers_data, contropartita_added = get_conto_data(suppliers_data, conto_path)
 
     # --- Scrittura del file Excel di output ---
     report_workbook = openpyxl.Workbook()
@@ -90,8 +177,8 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
 
     headers = ["Fornitore", "Codice Fornitore"]
     if contropartita_added:
-        headers.append("Contropartita")
-    headers.extend(["Antecedenti 2025"] + ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"] + ["Totale Anno"])
+        headers.insert(2, "Contropartita") # Inserisce in terza posizione
+    headers.extend(["Antecedenti 2025"] + [f"{month_name}" for month_name in ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]] + ["Totale Anno"])
     report_sheet.append(headers)
 
     sorted_suppliers = sorted(suppliers_data.items(), key=lambda item: item[1]['name'])
@@ -99,7 +186,7 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
     for code, data in sorted_suppliers:
         row_data = [data["name"], code]
         if contropartita_added:
-            row_data.append(data.get("Contropartita", ""))
+            row_data.insert(2, data.get("Contropartita", "N/A")) # Inserisce in terza posizione
         row_data.extend([data["antecedenti_2025_total"]] + [data["monthly_totals"][f"{m:02d}"] for m in range(1, 13)] + [data["yearly_total"]])
         report_sheet.append(row_data)
 

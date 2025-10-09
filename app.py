@@ -54,39 +54,46 @@ def generate_forecasting_data(input_excel_file):
             except (ValueError, TypeError): pass
     return suppliers_data
 
-def add_contropartita_data(report_data, anagrafica_file, contropartita_file):
-    """Arricchisce i dati del report con la colonna Contropartita."""
+def add_conto_data(report_data, conto_file):
+    """Arricchisce i dati del report con le informazioni sui conti da conto.xlsx."""
+    supplier_accounts = defaultdict(list)
     try:
-        wb_anagrafica = openpyxl.load_workbook(anagrafica_file, data_only=True)
-        sheet_anagrafica = wb_anagrafica["Sheet1"]
-        wb_contropartita = openpyxl.load_workbook(contropartita_file, data_only=True)
-        sheet_contropartita = wb_contropartita["Foglio1"]
+        wb_conto = openpyxl.load_workbook(conto_file, data_only=True)
+        sheet_conto = wb_conto["Foglio1"] # Assumiamo che il foglio si chiami Foglio1
+        
+        # Prefissi dei conti da considerare
+        valid_prefixes = ("50.10", "50.20", "52.10", "54.10")
 
-        contropartita_map = {str(row[0]): row[2] for row in sheet_contropartita.iter_rows(min_row=2, values_only=True) if row[0] is not None}
-        
-        anagrafica_map = {}
-        rows_iter = sheet_anagrafica.iter_rows()
-        for row in rows_iter:
-            if isinstance(row[0].value, str) and row[0].value.strip().lower() == "codice":
-                codice_fornitore = row[1].value
-                if codice_fornitore:
-                    try:
-                        next_row = next(rows_iter)
-                        ch_rifer_conto_code = next_row[10].value # Colonna K
-                        if ch_rifer_conto_code: anagrafica_map[str(codice_fornitore)] = str(ch_rifer_conto_code)
-                    except StopIteration: break
-        
-        # Aggiunge i dati di contropartita al dizionario del report
-        for code, data in report_data.items():
-            ch_rifer_code = anagrafica_map.get(str(code))
-            data["Contropartita"] = contropartita_map.get(ch_rifer_code, "") if ch_rifer_code else ""
-        
-        return report_data
+        last_ragione_sociale = "" # Variabile per gestire le celle unite
+
+        for row in sheet_conto.iter_rows(min_row=2, values_only=True):
+            if len(row) > 5:
+                current_ragione_sociale = str(row[4]).strip() if row[4] is not None else ""
+                conto = str(row[5]).strip() if row[5] is not None else ""
+
+                # Gestione delle celle unite: se la ragione sociale corrente è vuota, usa l'ultima non vuota
+                if current_ragione_sociale:
+                    last_ragione_sociale = current_ragione_sociale
+                
+                ragione_sociale_to_use = last_ragione_sociale
+
+                if ragione_sociale_to_use and conto.startswith(valid_prefixes):
+                    supplier_accounts[ragione_sociale_to_use].append(conto)
     except Exception as e:
-        st.warning(f"Errore nell'elaborazione della contropartita: {e}. Verrà mostrato il report base.")
-        return report_data
+        st.warning(f"Errore durante la lettura di conto.xlsx: {e}. Verrà mostrato il report base senza contropartita.")
+        return report_data, False # In caso di errore, ritorna i dati originali e indica che non è stato aggiunto nulla
 
-# --- Applicazione Streamlit ---
+    contropartita_added = False
+    for code, data in report_data.items():
+        supplier_name = data["name"]
+        if supplier_name in supplier_accounts:
+            data["Contropartita"] = ", ".join(sorted(list(set(supplier_accounts[supplier_name])))) # Unisci conti unici e ordinati
+            contropartita_added = True
+        else:
+            data["Contropartita"] = "N/A" # Nessun conto trovato per questo fornitore
+            
+    return report_data, contropartita_added
+
 st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
 st.title("📊 Vetronaviglio s.r.l. - Report Previsioni di Costo Economico")
 
@@ -94,21 +101,20 @@ uploaded_file = st.file_uploader("1. Carica il file `ordfor06.xlsx`", type=["xls
 
 # Sezione opzionale per Contropartita
 with st.expander("2. Aggiungi Contropartita (Opzionale)"):
-    uploaded_anagrafica = st.file_uploader("Carica `anagrafica.xlsx`", type=["xlsx"])
-    uploaded_contropartita = st.file_uploader("Carica `contropartita.xlsx`", type=["xlsx"])
+    uploaded_conto = st.file_uploader("Carica `conto.xlsx`", type=["xlsx"])
 
 if uploaded_file:
     st.success("File `ordfor06.xlsx` caricato.")
     
     suppliers_data = generate_forecasting_data(uploaded_file)
 
-    # Aggiungi dati contropartita se i file sono stati caricati
-    if uploaded_anagrafica and uploaded_contropartita:
-        st.info("File anagrafica e contropartita caricati. Aggiungo colonna al report.")
-        suppliers_data = add_contropartita_data(suppliers_data, uploaded_anagrafica, uploaded_contropartita)
+    contropartita_added = False
+    # Aggiungi dati contropartita se il file conto.xlsx è stato caricato
+    if uploaded_conto:
+        st.info("File `conto.xlsx` caricato. Aggiungo colonna al report.")
+        suppliers_data, contropartita_added = add_conto_data(suppliers_data, uploaded_conto)
 
     if suppliers_data:
-        # ... (resto del codice per la visualizzazione e il download) ...
         all_supplier_names_raw = sorted([data["name"] for data in suppliers_data.values()])
         all_supplier_names_for_multiselect = ["Tutti"] + all_supplier_names_raw
         selected_supplier_names = st.multiselect("Filtra Fornitori", options=all_supplier_names_for_multiselect, default=["Tutti"])
@@ -123,21 +129,24 @@ if uploaded_file:
         
         # Costruisci le righe del DataFrame
         for code, data in sorted_suppliers:
-            row_data = {"Fornitore": data["name"], "Codice Fornitore": code}
-            # Inserisci Contropartita se esiste
-            if "Contropartita" in data: row_data["Contropartita"] = data["Contropartita"]
+            row_data = {}
+            row_data["Fornitore"] = data["name"]
+            row_data["Codice Fornitore"] = code
+            if contropartita_added:
+                row_data["Contropartita"] = data.get("Contropartita", "N/A")
             row_data["Antecedenti 2025"] = data["antecedenti_2025_total"]
-            for month_num in range(1, 13): row_data[italian_month_names[month_num - 1]] = data["monthly_totals"][f"{month_num:02d}"]
+            for month_num in range(1, 13):
+                row_data[italian_month_names[month_num - 1]] = data["monthly_totals"][f"{month_num:02d}"]
             row_data["Totale Anno"] = data["yearly_total"]
             report_rows.append(row_data)
         
-        df = pd.DataFrame(report_rows)
+        # Define the desired column order
+        columns_order = ["Fornitore", "Codice Fornitore"]
+        if contropartita_added:
+            columns_order.append("Contropartita")
+        columns_order.extend(["Antecedenti 2025"] + italian_month_names + ["Totale Anno"])
 
-        # Riordina le colonne per avere Contropartita in terza posizione
-        if "Contropartita" in df.columns:
-            cols = df.columns.tolist()
-            cols.insert(2, cols.pop(cols.index('Contropartita')))
-            df = df[cols]
+        df = pd.DataFrame(report_rows, columns=columns_order)
 
         st.dataframe(df.style.format({col: "{:,.2f} €" for col in df.columns if col not in ["Fornitore", "Codice Fornitore", "Contropartita"]}), use_container_width=True)
 
