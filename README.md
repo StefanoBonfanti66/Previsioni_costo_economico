@@ -50,6 +50,7 @@ L'applicazione `app.py` fornisce un'interfaccia web interattiva (basata su Strea
 - Filtro interattivo per i fornitori.
 - Visualizzazione del report a schermo.
 - Download del report finale in formato Excel.
+- **Titolo aggiornato**: Il titolo dell'applicazione è stato modificato in "📊 Vetronaviglio s.r.l. - Report Previsioni Costo Economico".
 
 #### Come utilizzare l'applicazione
 
