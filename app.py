@@ -95,7 +95,7 @@ def add_conto_data(report_data, conto_file):
     return report_data, contropartita_added
 
 st.set_page_config(page_title="Report Previsioni di Costo Economico", layout="wide")
-st.title("📊 Vetronaviglio s.r.l. - Report Previsioni di Costo Economico")
+st.title("📊 Vetronaviglio s.r.l. - Report Previsioni Costo Economico")
 
 uploaded_file = st.file_uploader("1. Carica il file `ordfor06.xlsx`", type=["xlsx"])
 
