@@ -12,7 +12,7 @@ Lo script `generate_report.py` è lo strumento unico per la generazione del repo
 
 #### Funzionalità principali:
 - Estrazione e aggregazione degli ordini per fornitore, mese e anno.
-- Calcolo dei totali e formattazione in valuta (€).
+- Calcolo dei totali e formattazione in valuta (€) con arrotondamento all'intero.
 - **Arricchimento automatico (opzionale)**: Aggiunta della colonna "Contropartita" tramite mappatura da `conto.xlsx` con filtro sui prefissi dei conti.
 - Gestione dei fusi orari per un timestamp di aggiornamento sempre corretto (fuso orario di Roma).
 
@@ -48,7 +48,7 @@ L'applicazione `app.py` fornisce un'interfaccia web interattiva (basata su Strea
 - Caricamento del file `ordfor06.xlsx`.
 - **Sezione opzionale** per caricare `conto.xlsx` e aggiungere la colonna "Contropartita" (ragione sociale in colonna E, conto in colonna F, filtrato per prefissi specifici).
 - Filtro interattivo per i fornitori.
-- Visualizzazione del report a schermo.
+- Visualizzazione del report a schermo con importi in valuta (€) arrotondati all'intero.
 - Download del report finale in formato Excel.
 - **Titolo aggiornato**: Il titolo dell'applicazione è stato modificato in "📊 Vetronaviglio s.r.l. - Report Previsioni Costo Economico".
 
@@ -64,4 +64,4 @@ pip install streamlit pandas openpyxl pytz
 streamlit run app.py
 ```
 
-### Data Ultimo Aggiornamento: 09/10/2025 13:00:00
+### Data Ultimo Aggiornamento: 10/10/2025 15:30:00

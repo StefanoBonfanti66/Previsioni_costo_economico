@@ -148,7 +148,7 @@ if uploaded_file:
 
         df = pd.DataFrame(report_rows, columns=columns_order)
 
-        st.dataframe(df.style.format({col: "{:,.2f} €" for col in df.columns if col not in ["Fornitore", "Codice Fornitore", "Contropartita"]}), use_container_width=True)
+        st.dataframe(df.style.format({col: "{:,.0f} €" for col in df.columns if col not in ["Fornitore", "Codice Fornitore", "Contropartita"]}), use_container_width=True)
 
         # --- Logica per il download del file Excel --- 
         output_excel_buffer = io.BytesIO()
