@@ -55,8 +55,8 @@ def get_conto_data(suppliers_data, conto_path):
             data["Contropartita"] = "N/A"
     return suppliers_data, contropartita_added
 
-def generate_forecasting_report(input_filepath, output_filepath, sheet_name="Sheet1"):
-    """Genera un report di previsione e, se possibile, lo arricchisce con la contropartita e le condizioni di pagamento."""
+def generate_forecasting_report(input_filepath, output_filepath, sheet_name="Sheet1", start_year=2025, end_year=2026):
+    """Genera un report di previsione multi-anno e, se possibile, lo arricchisce con contropartita e condizioni di pagamento."""
     try:
         workbook = openpyxl.load_workbook(input_filepath)
         sheet = workbook[sheet_name]
@@ -64,8 +64,10 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
         return f"Errore during l'apertura del file di input: {e}"
 
     suppliers_data = defaultdict(lambda: {
-        "name": "", "monthly_totals": defaultdict(float),
-        "antecedenti_2025_total": 0.0, "yearly_total": 0.0
+        "name": "",
+        "monthly_totals": defaultdict(lambda: defaultdict(float)),
+        "antecedenti_total": 0.0,
+        "yearly_totals": defaultdict(float)
     })
     current_supplier_code = None
     for row in sheet.iter_rows():
@@ -79,20 +81,26 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
         elif current_supplier_code and col_a_value and isinstance(col_a_value, (str, int, float)) and str(col_a_value).strip() not in ["Cod. fornitore", "Subtotale"] and col_d_value and col_m_value is not None:
             try:
                 delivery_date = None
-                if isinstance(col_d_value, datetime): delivery_date = col_d_value
+                if isinstance(col_d_value, datetime):
+                    delivery_date = col_d_value
                 elif isinstance(col_d_value, str):
-                    try: delivery_date = datetime.strptime(col_d_value, "%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        try: delivery_date = datetime.strptime(col_d_value, "%Y-%m-%d")
+                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"):
+                        try:
+                            delivery_date = datetime.strptime(col_d_value, fmt)
+                            break
                         except ValueError:
-                            try: delivery_date = datetime.strptime(col_d_value, "%d/%m/%Y")
-                            except ValueError: pass
-                if delivery_date and delivery_date <= datetime(2025, 12, 31):
+                            pass
+                if delivery_date:
                     amount = float(str(col_m_value).replace(",", "."))
-                    if delivery_date.year == 2025: suppliers_data[current_supplier_code]['monthly_totals'][delivery_date.strftime("%m")] += amount
-                    elif delivery_date.year < 2025: suppliers_data[current_supplier_code]['antecedenti_2025_total'] += amount
-                    suppliers_data[current_supplier_code]['yearly_total'] += amount
-            except (ValueError, TypeError): pass
+                    year = delivery_date.year
+                    if year < start_year:
+                        suppliers_data[current_supplier_code]['antecedenti_total'] += amount
+                    elif start_year <= year <= end_year:
+                        month = delivery_date.strftime("%m")
+                        suppliers_data[current_supplier_code]['monthly_totals'][year][month] += amount
+                        suppliers_data[current_supplier_code]['yearly_totals'][year] += amount
+            except (ValueError, TypeError):
+                pass
 
     contropartita_added = False
     conto_path = "conto.xlsx"
@@ -118,7 +126,14 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
         headers.insert(2, "Contropartita")
     if payment_conditions_added:
         headers.insert(3, "Condizioni Pagamento")
-    headers.extend(["Antecedenti 2025"] + [f"{month_name}" for month_name in ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]] + ["Totale Anno"])
+    headers.append(f"Antecedenti {start_year}")
+
+    month_names = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    for year in range(start_year, end_year + 1):
+        for month_name in month_names:
+            headers.append(f"{month_name} {year}")
+        headers.append(f"Totale {year}")
+
     report_sheet.append(headers)
 
     sorted_suppliers = sorted(suppliers_data.items(), key=lambda item: item[1]['name'])
@@ -129,18 +144,22 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
             row_data.insert(2, data.get("Contropartita", "N/A"))
         if payment_conditions_added:
             row_data.insert(3, data.get("Condizioni Pagamento", "N/A"))
-        row_data.extend([data["antecedenti_2025_total"]] + [data["monthly_totals"][f"{m:02d}"] for m in range(1, 13)] + [data["yearly_total"]])
+        row_data.append(data["antecedenti_total"])
+
+        for year in range(start_year, end_year + 1):
+            for m in range(1, 13):
+                row_data.append(data["monthly_totals"][year][f"{m:02d}"])
+            row_data.append(data["yearly_totals"][year])
+
         report_sheet.append(row_data)
 
     currency_format = '#,##0 "€"'
-    start_col = 4 if contropartita_added else 3
-    if payment_conditions_added:
-        start_col += 1
-        
-    for col_idx in range(start_col, len(headers) + 1):
-        for row_idx in range(2, report_sheet.max_row + 1):
+    start_col_offset = 3 + (1 if contropartita_added else 0) + (1 if payment_conditions_added else 0)
+    for row_idx in range(2, report_sheet.max_row + 1):
+        for col_idx in range(start_col_offset, len(headers) + 1):
             cell = report_sheet.cell(row=row_idx, column=col_idx)
-            if isinstance(cell.value, (int, float)): cell.number_format = currency_format
+            if isinstance(cell.value, (int, float)):
+                cell.number_format = currency_format
 
     rome_tz = pytz.timezone('Europe/Rome')
     now_rome = datetime.now(rome_tz)
@@ -158,5 +177,5 @@ def generate_forecasting_report(input_filepath, output_filepath, sheet_name="She
         return f"Errore durante il salvataggio del report: {e}"
 
 if __name__ == "__main__":
-    result = generate_forecasting_report("ordfor06.xlsx", "forecasting.xlsx")
+    result = generate_forecasting_report("ordfor06.xlsx", "forecasting.xlsx", start_year=2025, end_year=2026)
     print(result)
